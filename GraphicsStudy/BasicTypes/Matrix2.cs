@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace GraphicsStudy
+namespace GraphicsStudy.BasicTypes
 {
     public struct Matrix2
     {

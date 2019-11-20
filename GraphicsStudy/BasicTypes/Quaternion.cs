@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace GraphicsStudy
+namespace GraphicsStudy.BasicTypes
 {
-    public struct Quarternion
+    public struct Quaternion
     {
         public float x;
         public float y;
