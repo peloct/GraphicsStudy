@@ -7,9 +7,11 @@
         xmlns:opentk="clr-namespace:OpenTK;assembly=OpenTK.GLControl"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
-    <Grid>
-        <WindowsFormsHost Margin="10" Initialized="WindowsFormsHost_Initialized">
+    <DockPanel LastChildFill="True">
+        <Grid x:Name="userControlRoot" DockPanel.Dock="Right" Width="200">
+        </Grid>
+        <WindowsFormsHost DockPanel.Dock="Left" Margin="10" Initialized="WindowsFormsHost_Initialized">
             <opentk:GLControl x:Name="glControl" Load="GLControl_Load" Resize="GLControl_Resize" Paint="GLControl_Paint"/>
         </WindowsFormsHost>
-    </Grid>
+    </DockPanel>
 </Window>
