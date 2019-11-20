@@ -64,6 +64,13 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="BasicTypes\Matrix2.cs" />
+    <Compile Include="BasicTypes\Matrix3.cs" />
+    <Compile Include="BasicTypes\Matrix4.cs" />
+    <Compile Include="BasicTypes\Quaternion.cs" />
+    <Compile Include="BasicTypes\Vector2.cs" />
+    <Compile Include="BasicTypes\Vector3.cs" />
+    <Compile Include="BasicTypes\Vector4.cs" />
     <Compile Include="UnitStudies\SampleStudy.cs" />
     <Compile Include="UserControls\SampleControl.xaml.cs">
       <DependentUpon>SampleControl.xaml</DependentUpon>
