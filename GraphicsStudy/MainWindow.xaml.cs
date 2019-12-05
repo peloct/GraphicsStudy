@@ -1,80 +1,53 @@
-﻿using System;
-using System.Windows;
-using System.Windows.Controls;
-using GraphicsStudy.UnitStudies;
-using OpenTK;
+﻿using System.Windows;
+using GraphicsStudy.UI;
+using Microsoft.Win32;
 
 namespace GraphicsStudy
 {
-    public abstract class IUnitStudy
-    {
-        protected GLControl glControl;
-
-        public void SetGLControl(GLControl glControl)
-        {
-            this.glControl = glControl;
-        }
-
-        public virtual void InitComponent(Grid userControlRoot)
-        {
-            userControlRoot.Width = 0f;
-        }
-
-        public abstract void OnInit(object data);
-        public abstract void OnLoad(object data);
-        public abstract void OnResize(object data);
-        public abstract void OnPaint(object data);
-    }
-
     /// <summary>
     /// MainWindow.xaml에 대한 상호 작용 논리
     /// </summary>
     public partial class MainWindow : Window
     {
-        private class NullUnitStudy : IUnitStudy
-        {
-            public override void InitComponent(Grid userControlRoot)
-            {
-                userControlRoot.Width = 0;
-            }
-
-            public override void OnInit(object data) { }
-
-            public override void OnLoad(object data) { }
-
-            public override void OnPaint(object data) { }
-
-            public override void OnResize(object data) { }
-        }
-
-        private IUnitStudy unitStudy = new NullUnitStudy();
+        private FbxSDK.Manager fbxManager;
+        private NodeHierarchy nodeHierarchy;
 
         public MainWindow()
         {
-            unitStudy = new SampleStudy();
             InitializeComponent();
-            unitStudy.InitComponent(userControlRoot);
+            fbxManager = FbxSDK.Manager.Create();
         }
 
-        private void WindowsFormsHost_Initialized(object sender, EventArgs e)
+        private void MenuItem_LoadFile(object sender, RoutedEventArgs e)
         {
-            unitStudy.SetGLControl(glControl);
-            unitStudy.OnInit(null);
-        }
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Filter = "FBX files (*.fbx)|*.fbx";
+            if (openFileDialog.ShowDialog() == true)
+            {
+                var scene = fbxManager.CreateSceneFromFile(openFileDialog.FileName);
 
-        private void GLControl_Load(object sender, EventArgs e)
-        {
-            unitStudy.OnLoad(null);
-        }
+                if (nodeHierarchy != null)
+                {
+                    Window window = nodeHierarchy.Parent as Window;
+                    window.Close();
+                }
 
-        private void GLControl_Paint(object sender, System.Windows.Forms.PaintEventArgs e)
-        {
-            unitStudy.OnPaint(null);
-        }
+                nodeHierarchy = new NodeHierarchy();
+                nodeHierarchy.SetNode(scene.GetRootNode());
 
-        private void GLControl_Resize(object sender, EventArgs e)
-        {
-            unitStudy.OnResize(null);
+                Window hierarchyWindow = new Window()
+                {
+                    Title = "Node Hierarchy",
+                    WindowStyle = WindowStyle.ToolWindow,
+                    Content = nodeHierarchy
+                };
+
+                hierarchyWindow.Show();
+                hierarchyWindow.Closed += (obj, arg) =>
+                {
+                    nodeHierarchy = null;
+                };
+            }
         }
     }
 }

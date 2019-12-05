@@ -35,6 +35,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="FbxSDKNet">
+      <HintPath>..\FbxSdkNet\FbxSDKNet.dll</HintPath>
+    </Reference>
     <Reference Include="OpenTK, Version=3.1.0.0, Culture=neutral, PublicKeyToken=bad199fe84eb3df4, processorArchitecture=MSIL">
       <HintPath>..\packages\OpenTK.3.1.0\lib\net20\OpenTK.dll</HintPath>
     </Reference>
@@ -71,11 +74,14 @@
     <Compile Include="BasicTypes\Vector2.cs" />
     <Compile Include="BasicTypes\Vector3.cs" />
     <Compile Include="BasicTypes\Vector4.cs" />
-    <Compile Include="UnitStudies\SampleStudy.cs" />
-    <Compile Include="UserControls\SampleControl.xaml.cs">
-      <DependentUpon>SampleControl.xaml</DependentUpon>
+    <Compile Include="Debug\DebugUtil.cs" />
+    <Compile Include="Rendering\Shader.cs" />
+    <Compile Include="UI\NodeHierarchy.xaml.cs">
+      <DependentUpon>NodeHierarchy.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Utils.cs" />
+    <Compile Include="UI\Scene.xaml.cs">
+      <DependentUpon>Scene.xaml</DependentUpon>
+    </Compile>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -88,7 +94,11 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="UserControls\SampleControl.xaml">
+    <Page Include="UI\NodeHierarchy.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\Scene.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -117,6 +127,8 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
+    <None Include="Resources\Shaders\SimpleColor.frag" />
+    <None Include="Resources\Shaders\TransformPos.vert" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

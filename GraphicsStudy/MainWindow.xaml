@@ -3,15 +3,19 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:GraphicsStudy"
-        xmlns:opentk="clr-namespace:OpenTK;assembly=OpenTK.GLControl"
+        xmlns:uc="clr-namespace:GraphicsStudy.UI"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
-    <DockPanel LastChildFill="True">
-        <Grid x:Name="userControlRoot" DockPanel.Dock="Right" Width="200">
-        </Grid>
-        <WindowsFormsHost DockPanel.Dock="Left" Margin="10" Initialized="WindowsFormsHost_Initialized">
-            <opentk:GLControl x:Name="glControl" Load="GLControl_Load" Resize="GLControl_Resize" Paint="GLControl_Paint"/>
-        </WindowsFormsHost>
-    </DockPanel>
+    <Grid Background="#FF1E1E1E">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="20"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        <Menu Grid.Row="0">
+            <MenuItem Header="_File">
+                <MenuItem Header="Load" Click="MenuItem_LoadFile"/>
+            </MenuItem>
+        </Menu>
+        <uc:Scene Grid.Row="1"/>
+    </Grid>
 </Window>

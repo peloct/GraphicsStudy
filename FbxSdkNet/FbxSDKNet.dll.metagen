@@ -1,0 +1,85 @@
+ImageRuntimeVersion: v4.0.30319
+Assembly FbxSDKNet, Version=1.0.*, Culture=고정 언어(고정 국가): 
+	hash=SHA1, flags=PublicKey
+Assembly mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089: 
+	hash=None, flags=None
+Assembly System.Data, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089: 
+	hash=None, flags=None
+Assembly System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089: 
+	hash=None, flags=None
+Assembly System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089: 
+	hash=None, flags=None
+Class FbxSDK.Manager: AutoLayout, AnsiClass, Class, Public, BeforeFieldInit
+  Interfaces:
+    System.IDisposable
+  Methods:
+    Create(): PrivateScope, Public, Static, HideBySig
+    GetVersion(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig
+    GetVersion(): PrivateScope, Public, HideBySig
+    CreateSceneFromFile(String): PrivateScope, Public, HideBySig
+    CreateScene(String): PrivateScope, Public, HideBySig
+    Dispose(): PrivateScope, Public, Final, Virtual, HideBySig
+Class FbxSDK.Scene: AutoLayout, AnsiClass, Class, Public, BeforeFieldInit
+  Interfaces:
+    System.IDisposable
+  Methods:
+    GetRootNode(): PrivateScope, Public, HideBySig
+    Dispose(): PrivateScope, Public, Final, Virtual, HideBySig
+Struct FbxSDK.Vector2: AutoLayout, AnsiClass, Class, Public, SequentialLayout, Sealed, BeforeFieldInit
+  :System.ValueType
+    Void .ctor(Single, Single): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+  Fields:
+    Single x : Public
+    Single y : Public
+  Methods:
+    op_Equality(ValueType IsConst Vector2 IsBoxed): PrivateScope, Public, HideBySig, SpecialName
+    ToString(): PrivateScope, Public, Final, Virtual, HideBySig
+Struct FbxSDK.Vector3: AutoLayout, AnsiClass, Class, Public, SequentialLayout, Sealed, BeforeFieldInit
+  :System.ValueType
+    Void .ctor(Single, Single, Single): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+  Fields:
+    Single x : Public
+    Single y : Public
+    Single z : Public
+  Methods:
+    op_Equality(ValueType IsConst Vector3 IsBoxed): PrivateScope, Public, HideBySig, SpecialName
+    ToString(): PrivateScope, Public, Final, Virtual, HideBySig
+Class FbxSDK.Vertex: AutoLayout, AnsiClass, Class, Public, BeforeFieldInit
+    Void .ctor(System.ValueType, System.ValueType, System.ValueType, System.ValueType, System.ValueType): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+  Fields:
+    System.ValueType position Vector3 IsBoxed : Public
+    System.ValueType normal Vector3 IsBoxed : Public
+    System.ValueType binormal Vector3 IsBoxed : Public
+    System.ValueType tangent Vector3 IsBoxed : Public
+    System.ValueType uv Vector2 IsBoxed : Public
+  Methods:
+    op_Equality(Vertex IsConst): PrivateScope, Public, HideBySig, SpecialName
+Class FbxSDK.Mesh: AutoLayout, AnsiClass, Class, Public, BeforeFieldInit
+  Fields:
+    Int32[] indices : Public
+    FbxSDK.Vector3[] vertices : Public
+    FbxSDK.Vector3[] normals : Public
+    FbxSDK.Vector3[] binoramls : Public
+    FbxSDK.Vector3[] tangents : Public
+    FbxSDK.Vector2[] uvs : Public
+  Methods:
+    GetName(): PrivateScope, Public, HideBySig
+Class FbxSDK.Node: AutoLayout, AnsiClass, Class, Public, BeforeFieldInit
+  Methods:
+    GetChild(Int32): PrivateScope, Public, HideBySig
+    GetParent(): PrivateScope, Public, HideBySig
+    GetChildCount(): PrivateScope, Public, HideBySig
+    GetAttributeCount(): PrivateScope, Public, HideBySig
+    GetAttributeType(Int32): PrivateScope, Public, HideBySig
+    IsMesh(): PrivateScope, Public, HideBySig
+    GetMesh(): PrivateScope, Public, HideBySig
+    GetName(): PrivateScope, Public, HideBySig
+Struct FbxSDK.NodeAttributeType: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
+  :System.Enum
+  Fields:
+    Int32 value__ : Public, SpecialName, RTSpecialName
+    FbxSDK.NodeAttributeType Camera = 0 : Public, Static, Literal, HasDefault
+    FbxSDK.NodeAttributeType Light = 1 : Public, Static, Literal, HasDefault
+    FbxSDK.NodeAttributeType Mesh = 2 : Public, Static, Literal, HasDefault
+    FbxSDK.NodeAttributeType Skeleton = 3 : Public, Static, Literal, HasDefault
+    FbxSDK.NodeAttributeType Unknown = 4 : Public, Static, Literal, HasDefault
