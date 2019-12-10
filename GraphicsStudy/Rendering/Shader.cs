@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using OpenTK;
+using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL4;
 
 namespace GraphicsStudy.Rendering
@@ -37,15 +39,18 @@ namespace GraphicsStudy.Rendering
                 int vertexShader = GL.CreateShader(ShaderType.VertexShader);
                 GL.ShaderSource(vertexShader, vertexShaderText);
                 GL.CompileShader(vertexShader);
+                System.Diagnostics.Debug.WriteLine(GL.GetShaderInfoLog(vertexShader));
 
                 int fragmentShader = GL.CreateShader(ShaderType.FragmentShader);
                 GL.ShaderSource(fragmentShader, fragmentShaderText);
                 GL.CompileShader(fragmentShader);
+                System.Diagnostics.Debug.WriteLine(GL.GetShaderInfoLog(fragmentShader));
 
                 int program = GL.CreateProgram();
                 GL.AttachShader(program, vertexShader);
                 GL.AttachShader(program, fragmentShader);
                 GL.LinkProgram(program);
+                System.Diagnostics.Debug.WriteLine(GL.GetProgramInfoLog(program));
 
                 GL.DetachShader(program, vertexShader);
                 GL.DetachShader(program, fragmentShader);
@@ -66,9 +71,21 @@ namespace GraphicsStudy.Rendering
 
         private Shader() { }
 
-        public void SetColor(string propertyName)
+        public void Use()
         {
+            GL.UseProgram(program);
+        }
 
+        public void SetColor(string propertyName, Color4 color)
+        {
+            int location = GL.GetUniformLocation(program, propertyName);
+            GL.Uniform4(location, color);
+        }
+
+        public void SetMatrix4(string propertyName, ref Matrix4 matrix)
+        {
+            int location = GL.GetUniformLocation(program, propertyName);
+            GL.UniformMatrix4(location, false, ref matrix);
         }
     }
 }

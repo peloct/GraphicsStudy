@@ -16,6 +16,6 @@
                 <MenuItem Header="Load" Click="MenuItem_LoadFile"/>
             </MenuItem>
         </Menu>
-        <uc:Scene Grid.Row="1"/>
+        <uc:SceneViewer x:Name="sceneViewer" Grid.Row="1"/>
     </Grid>
 </Window>

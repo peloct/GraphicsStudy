@@ -22,29 +22,12 @@ namespace GraphicsStudy.UI
         {
             TreeViewItem viewItem = new TreeViewItem();
             string name = node.GetName();
+            var attribute = node.GetAttribute();
 
-            int attributeCount = node.GetAttributeCount();
-
-            if (attributeCount > 0)
+            if (attribute != null)
             {
-                string[] tags = new string[attributeCount];
-
-                for (int i = 0; i < attributeCount; ++i)
-                {
-                    var attributeType = node.GetAttributeType(i);
-                    if (attributeType == FbxSDK.NodeAttributeType.Camera)
-                        tags[i] = "Camera";
-                    else if (attributeType == FbxSDK.NodeAttributeType.Light)
-                        tags[i] = "Light";
-                    else if (attributeType == FbxSDK.NodeAttributeType.Mesh)
-                        tags[i] = "Mesh";
-                    else if (attributeType == FbxSDK.NodeAttributeType.Skeleton)
-                        tags[i] = "Skeleton";
-                    else
-                        tags[i] = "Unkown";
-                }
-
-                name += string.Format(" ({0})", string.Join(", ", tags));
+                var attributeType = attribute.GetAttributeType();
+                name += string.Format(" ({0})", attributeType);
             }
 
             viewItem.Header = name;

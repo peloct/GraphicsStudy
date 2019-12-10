@@ -335,5 +335,27 @@ namespace GraphicsStudy.BasicTypes
                 m02, m12, m22, m32,
                 m03, m13, m23, m33);
         }
+
+        public static Matrix4 TRS(Vector3 translation, Vector3 rotation, Vector3 scaling)
+        {
+            Matrix4 ret = new Matrix4();
+            ret.m03 = translation.x;
+            ret.m13 = translation.y;
+            ret.m23 = translation.z;
+            ret.m33 = 1;
+            return ret;
+        }
+
+        public static Matrix4 PerspectiveMatrix(float fieldOfView, float aspect, float n, float f)
+        {
+            Matrix4 ret = new Matrix4();
+            float c = (float)(1 / Math.Tan(fieldOfView * 0.5f));
+            ret.m00 = c / aspect;
+            ret.m11 = c;
+            ret.m22 = -(f + n) / (f - n);
+            ret.m23 = -(2 * f * n) / (f - n);
+            ret.m32 = -1;
+            return ret;
+        }
     }
 }
