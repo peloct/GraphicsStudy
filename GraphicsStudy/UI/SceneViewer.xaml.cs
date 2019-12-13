@@ -30,16 +30,19 @@ namespace GraphicsStudy.UI
         private Matrix4 projection;
         private Matrix4 view;
 
+        private float globalScale = 1;
+        private Matrix4 globalTrans = Matrix4.Identity;
+
         private List<MeshInfo> meshInfoList = new List<MeshInfo>();
 
         public SceneViewer()
         {
             InitializeComponent();
+            globalScaleSlider.Value = 1f;
         }
 
         public void ShowScene(FbxSDK.Scene scene)
         {
-            this.scene = scene;
             glControl.MakeCurrent();
             SearchMesh(scene.GetRootNode());
         }
@@ -111,7 +114,7 @@ namespace GraphicsStudy.UI
             {
                 vertexArray = newVertexArray,
                 polygonCount = polygonCount,
-                transform = Matrix4.CreateTranslation((float)-xSum, (float)-ySum, (float)-zSum) * Matrix4.CreateScale(10 / maxVal)// GetTransform(node)
+                transform = GetTransform(node)
             });
 
             GL.BindVertexArray(newVertexArray);
@@ -207,7 +210,7 @@ namespace GraphicsStudy.UI
         private void UpdateProjectionMatrix()
         {
             float aspect = glControl.Width / (float)glControl.Height;
-            projection = Matrix4.CreatePerspectiveFieldOfView((float)Math.PI / 3f, aspect, 1, 3000);
+            projection = Matrix4.CreatePerspectiveFieldOfView((float)Math.PI / 3f, aspect, 0.1f, 1000);
         }
 
         private void UpdateViewMatrix()
@@ -275,7 +278,7 @@ namespace GraphicsStudy.UI
             for (int i = 0; i < meshInfoList.Count; ++i)
             {
                 GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
-                Matrix4 mvp = meshInfoList[i].transform * view * projection;
+                Matrix4 mvp = meshInfoList[i].transform * globalTrans * view * projection;
                 shader.SetMatrix4("mvp", ref mvp);
                 shader.SetColor("color", new Color4(1f, 1f, 1f, 1f));
                 GL.BindVertexArray(meshInfoList[i].vertexArray);
@@ -296,6 +299,12 @@ namespace GraphicsStudy.UI
             glControl.MakeCurrent();
             GL.Viewport(0, 0, glControl.Width, glControl.Height);
             UpdateProjectionMatrix();
+        }
+
+        private void globalScaleSlider_ValueChanged(object sender, System.Windows.RoutedPropertyChangedEventArgs<double> e)
+        {
+            globalScale = (float)e.NewValue;
+            globalTrans = Matrix4.CreateScale(globalScale);
         }
     }
 }
