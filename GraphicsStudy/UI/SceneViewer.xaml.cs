@@ -264,7 +264,7 @@ namespace GraphicsStudy.UI
             else if (e.KeyChar == 'd')
                 camPos += right * speed;
 
-            System.Diagnostics.Debug.WriteLine(camPos);
+            DebugUtil.WriteLine(camPos);
             UpdateViewMatrix();
         }
 

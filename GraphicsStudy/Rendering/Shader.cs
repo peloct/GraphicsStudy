@@ -39,18 +39,18 @@ namespace GraphicsStudy.Rendering
                 int vertexShader = GL.CreateShader(ShaderType.VertexShader);
                 GL.ShaderSource(vertexShader, vertexShaderText);
                 GL.CompileShader(vertexShader);
-                System.Diagnostics.Debug.WriteLine(GL.GetShaderInfoLog(vertexShader));
+                DebugUtil.WriteLine(GL.GetShaderInfoLog(vertexShader));
 
                 int fragmentShader = GL.CreateShader(ShaderType.FragmentShader);
                 GL.ShaderSource(fragmentShader, fragmentShaderText);
                 GL.CompileShader(fragmentShader);
-                System.Diagnostics.Debug.WriteLine(GL.GetShaderInfoLog(fragmentShader));
+                DebugUtil.WriteLine(GL.GetShaderInfoLog(fragmentShader));
 
                 int program = GL.CreateProgram();
                 GL.AttachShader(program, vertexShader);
                 GL.AttachShader(program, fragmentShader);
                 GL.LinkProgram(program);
-                System.Diagnostics.Debug.WriteLine(GL.GetProgramInfoLog(program));
+                DebugUtil.WriteLine(GL.GetProgramInfoLog(program));
 
                 GL.DetachShader(program, vertexShader);
                 GL.DetachShader(program, fragmentShader);
