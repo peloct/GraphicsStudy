@@ -14,13 +14,23 @@ namespace GraphicsStudy.UI
     /// </summary>
     public partial class SceneViewer : UserControl
     {
+        private class Node
+        {
+            public string name;
+            public Matrix4 toParent;
+            public Matrix4 localToWorld;
+            public Node[] children;
+        }
+
         private class MeshInfo
         {
+            public Node node;
             public int vertexArray;
             public int polygonCount;
-
-            public Matrix4 transform;
         }
+
+        private Node rootNode;
+        private List<MeshInfo> meshInfoList = new List<MeshInfo>();
 
         private FbxSDK.Scene scene;
         private Shader shader;
@@ -33,8 +43,6 @@ namespace GraphicsStudy.UI
         private float globalScale = 1;
         private Matrix4 globalTrans = Matrix4.Identity;
 
-        private List<MeshInfo> meshInfoList = new List<MeshInfo>();
-
         public SceneViewer()
         {
             InitializeComponent();
@@ -43,48 +51,60 @@ namespace GraphicsStudy.UI
 
         public void ShowScene(FbxSDK.Scene scene)
         {
+            this.scene = scene;
             glControl.MakeCurrent();
-            SearchMesh(scene.GetRootNode());
+            Matrix4 identity = Matrix4.Identity;
+            rootNode = ConstructNodeTree(scene.GetRootNode(), ref identity);
         }
 
-        private void SearchMesh(FbxSDK.Node node)
+        private Node ConstructNodeTree(FbxSDK.Node node, ref Matrix4 parentMatrix)
         {
+            Node ret = new Node();
+            ret.name = node.GetName();
+            ret.toParent = GetTransform(node);
+            ret.localToWorld = ret.toParent * parentMatrix;
+
             var attribute = node.GetAttribute();
 
             if (attribute != null && attribute.GetAttributeType() == FbxSDK.NodeAttributeType.Mesh)
-                LoadMesh(node);
+                LoadMesh(ret, node);
 
             int childCount = node.GetChildCount();
+            ret.children = new Node[childCount];
             for (int i = 0; i < childCount; ++i)
-                SearchMesh(node.GetChild(i));
+                ret.children[i] = ConstructNodeTree(node.GetChild(i), ref ret.localToWorld);
+
+            return ret;
         }
 
-        private void LoadMesh(FbxSDK.Node node)
+        private Node SearchNode(Node node, ref string name)
         {
-            var mesh = (FbxSDK.Mesh)node.GetAttribute();
+            if (node.name == name)
+                return node;
+
+            for (int i = 0; i < node.children.Length; ++i)
+            {
+                Node result = SearchNode(node.children[i], ref name);
+                if (result != null)
+                    return result;
+            }
+
+            return null;
+        }
+
+        private void LoadMesh(Node node, FbxSDK.Node fbxNode)
+        {
+            var mesh = (FbxSDK.Mesh)fbxNode.GetAttribute();
             int polygonCount = mesh.GetPolygonCount();
 
-            float maxVal = 0;
             float[] vertexDatas = new float[polygonCount * 3 * 3];
             int size = 0;
-
-            double xSum = 0;
-            double ySum = 0;
-            double zSum = 0;
 
             for (int i = 0; i < polygonCount; ++i)
             {
                 for (int j = 0; j < 3; ++j)
                 {
                     var coordinate = mesh.GetCoordinate(i, j);
-
-                    maxVal = Math.Max(maxVal, (float)Math.Abs(coordinate.x));
-                    maxVal = Math.Max(maxVal, (float)Math.Abs(coordinate.y));
-                    maxVal = Math.Max(maxVal, (float)Math.Abs(coordinate.z));
-
-                    xSum += coordinate.x;
-                    ySum += coordinate.y;
-                    zSum += coordinate.z;
 
                     vertexDatas[size++] = (float)coordinate.x;
                     vertexDatas[size++] = (float)coordinate.y;
@@ -92,19 +112,30 @@ namespace GraphicsStudy.UI
                 }
             }
 
-            xSum /= polygonCount * 3;
-            ySum /= polygonCount * 3;
-            zSum /= polygonCount * 3;
-
-            for (int i = 0; i < polygonCount; ++i)
+            int deformerCount = mesh.GetSkinDeformerCount();
+            for (int i = 0; i < deformerCount; ++i)
             {
-                for (int j = 0; j < 3; ++j)
+                int clusterCount = mesh.GetClusterCount(i);
+                for (int j = 0; j < clusterCount; ++j)
                 {
-                    var coordinate = mesh.GetCoordinate(i, j);
+                    var cluster = mesh.GetCluster(i, j);
+                    var link = cluster.GetLink();
+                    string linkName = link.GetName();
 
-                    maxVal = Math.Max(maxVal, (float)Math.Abs(coordinate.x - xSum));
-                    maxVal = Math.Max(maxVal, (float)Math.Abs(coordinate.y - ySum));
-                    maxVal = Math.Max(maxVal, (float)Math.Abs(coordinate.z - zSum));
+                    Node linkNode = SearchNode(rootNode, ref linkName);
+
+                    if (linkNode == null)
+                    {
+                        System.Diagnostics.Debug.WriteLine("Cannot find bone " + linkName);
+                        continue;
+                    }
+
+                    int controlPointCount = cluster.GetControlIndicesCount();
+                    for (int k = 0; k < controlPointCount; ++k)
+                    {
+                        int controlPointIndex = cluster.GetControlPointIndex(k);
+                        double weight = cluster.GetControlPointWeight(k);
+                    }
                 }
             }
 
@@ -112,9 +143,9 @@ namespace GraphicsStudy.UI
 
             meshInfoList.Add(new MeshInfo()
             {
+                node = node,
                 vertexArray = newVertexArray,
-                polygonCount = polygonCount,
-                transform = GetTransform(node)
+                polygonCount = polygonCount
             });
 
             GL.BindVertexArray(newVertexArray);
@@ -122,37 +153,6 @@ namespace GraphicsStudy.UI
             int vertexBuffer = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, vertexBuffer);
             GL.BufferData(BufferTarget.ArrayBuffer, size * sizeof(float), vertexDatas, BufferUsageHint.StaticDraw);
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
-            GL.EnableVertexAttribArray(0);
-
-            GL.BindVertexArray(0);
-        }
-
-        private void LoadTriangle()
-        {
-            int polygonCount = 1;
-
-            float h = 1;
-
-            float[] vertexDatas = new float[]
-            {
-                -h, -h, 0, h, -h, 0, -h, h, 0,
-            };
-
-            int newVertexArray = GL.GenVertexArray();
-
-            meshInfoList.Add(new MeshInfo()
-            {
-                vertexArray = newVertexArray,
-                polygonCount = polygonCount,
-                transform = Matrix4.Identity
-            });
-
-            GL.BindVertexArray(newVertexArray);
-
-            int vertexBuffer = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, vertexBuffer);
-            GL.BufferData(BufferTarget.ArrayBuffer, vertexDatas.Length * sizeof(float), vertexDatas, BufferUsageHint.StaticDraw);
             GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
             GL.EnableVertexAttribArray(0);
 
@@ -167,38 +167,38 @@ namespace GraphicsStudy.UI
             switch (node.GetRotationOrder())
             {
                 case FbxSDK.RotationOrder.EulerXYZ:
-                    transform = transform * Matrix4.CreateRotationX((float)rotation.x);
-                    transform = transform * Matrix4.CreateRotationY((float)rotation.y);
-                    transform = transform * Matrix4.CreateRotationZ((float)rotation.z);
+                    transform *= Matrix4.CreateRotationX((float)rotation.x);
+                    transform *= Matrix4.CreateRotationY((float)rotation.y);
+                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
                     break;
                 case FbxSDK.RotationOrder.EulerXZY:
-                    transform = transform * Matrix4.CreateRotationX((float)rotation.x);
-                    transform = transform * Matrix4.CreateRotationZ((float)rotation.z);
-                    transform = transform * Matrix4.CreateRotationY((float)rotation.y);
+                    transform *= Matrix4.CreateRotationX((float)rotation.x);
+                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
+                    transform *= Matrix4.CreateRotationY((float)rotation.y);
                     break;
                 case FbxSDK.RotationOrder.EulerYXZ:
-                    transform = transform * Matrix4.CreateRotationY((float)rotation.y);
-                    transform = transform * Matrix4.CreateRotationX((float)rotation.x);
-                    transform = transform * Matrix4.CreateRotationZ((float)rotation.z);
+                    transform *= Matrix4.CreateRotationY((float)rotation.y);
+                    transform *= Matrix4.CreateRotationX((float)rotation.x);
+                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
                     break;
                 case FbxSDK.RotationOrder.EulerYZX:
-                    transform = transform * Matrix4.CreateRotationY((float)rotation.y);
-                    transform = transform * Matrix4.CreateRotationZ((float)rotation.z);
-                    transform = transform * Matrix4.CreateRotationX((float)rotation.x);
+                    transform *= Matrix4.CreateRotationY((float)rotation.y);
+                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
+                    transform *= Matrix4.CreateRotationX((float)rotation.x);
                     break;
                 case FbxSDK.RotationOrder.EulerZXY:
-                    transform = transform * Matrix4.CreateRotationZ((float)rotation.z);
-                    transform = transform * Matrix4.CreateRotationX((float)rotation.x);
-                    transform = transform * Matrix4.CreateRotationY((float)rotation.y);
+                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
+                    transform *= Matrix4.CreateRotationX((float)rotation.x);
+                    transform *= Matrix4.CreateRotationY((float)rotation.y);
                     break;
                 case FbxSDK.RotationOrder.EulerZYX:
-                    transform = transform * Matrix4.CreateRotationZ((float)rotation.z);
-                    transform = transform * Matrix4.CreateRotationY((float)rotation.y);
-                    transform = transform * Matrix4.CreateRotationX((float)rotation.x);
+                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
+                    transform *= Matrix4.CreateRotationY((float)rotation.y);
+                    transform *= Matrix4.CreateRotationX((float)rotation.x);
                     break;
             }
 
-            transform = transform * Matrix4.CreateTranslation(Convert(node.GetTranslation()));
+            transform *= Matrix4.CreateTranslation(Convert(node.GetTranslation()));
             return transform;
         }
 
@@ -278,7 +278,7 @@ namespace GraphicsStudy.UI
             for (int i = 0; i < meshInfoList.Count; ++i)
             {
                 GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
-                Matrix4 mvp = meshInfoList[i].transform * globalTrans * view * projection;
+                Matrix4 mvp = meshInfoList[i].node.localToWorld * globalTrans * view * projection;
                 shader.SetMatrix4("mvp", ref mvp);
                 shader.SetColor("color", new Color4(1f, 1f, 1f, 1f));
                 GL.BindVertexArray(meshInfoList[i].vertexArray);
