@@ -5,19 +5,19 @@ namespace GraphicsStudy
 {
     public static class DebugUtil
     {
-        [Conditional("_DEBUG")]
+        [Conditional("DEBUG")]
         public static void WriteLine(object value)
         {
             SDebug.WriteLine(value);
         }
 
-        [Conditional("_DEBUG")]
+        [Conditional("DEBUG")]
         public static void WriteLine(string message)
         {
             SDebug.WriteLine(message);
         }
 
-        [Conditional("_DEBUG")]
+        [Conditional("DEBUG")]
         public static void WriteLine(string format, params object[] args)
         {
             SDebug.WriteLine(format, args);

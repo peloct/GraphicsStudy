@@ -16,6 +16,7 @@ namespace GraphicsStudy.UI
     {
         private class Node
         {
+            public FbxSDK.Node fbxNode;
             public string name;
             public Matrix4 toParent;
             public Matrix4 localToWorld;
@@ -31,6 +32,7 @@ namespace GraphicsStudy.UI
 
         private Node rootNode;
         private List<MeshInfo> meshInfoList = new List<MeshInfo>();
+        private List<FbxSDK.Pose> poseList = new List<FbxSDK.Pose>();
 
         private FbxSDK.Scene scene;
         private Shader shader;
@@ -39,6 +41,8 @@ namespace GraphicsStudy.UI
 
         private Matrix4 projection;
         private Matrix4 view;
+
+        private int selectedPose = 0;
 
         private float globalScale = 1;
         private Matrix4 globalTrans = Matrix4.Identity;
@@ -55,19 +59,21 @@ namespace GraphicsStudy.UI
             glControl.MakeCurrent();
             Matrix4 identity = Matrix4.Identity;
             rootNode = ConstructNodeTree(scene.GetRootNode(), ref identity);
+
+            int poseCount = scene.GetPoseCount();
+            for (int i = 0; i < poseCount; ++i)
+                poseList.Add(scene.GetPose(i));
+
+            LoadMeshRecursively(rootNode);
         }
 
         private Node ConstructNodeTree(FbxSDK.Node node, ref Matrix4 parentMatrix)
         {
             Node ret = new Node();
+            ret.fbxNode = node;
             ret.name = node.GetName();
-            ret.toParent = GetTransform(node);
-            ret.localToWorld = ret.toParent * parentMatrix;
-
-            var attribute = node.GetAttribute();
-
-            if (attribute != null && attribute.GetAttributeType() == FbxSDK.NodeAttributeType.Mesh)
-                LoadMesh(ret, node);
+            ret.toParent = GetGlobalTransform(node);
+            ret.localToWorld = GetGlobalTransform(node) * GetGeometry(node);//  ret.toParent * parentMatrix;
 
             int childCount = node.GetChildCount();
             ret.children = new Node[childCount];
@@ -75,6 +81,17 @@ namespace GraphicsStudy.UI
                 ret.children[i] = ConstructNodeTree(node.GetChild(i), ref ret.localToWorld);
 
             return ret;
+        }
+
+        private void LoadMeshRecursively(Node node)
+        {
+            var attribute = node.fbxNode.GetAttribute();
+
+            if (attribute != null && attribute.GetAttributeType() == FbxSDK.NodeAttributeType.Mesh)
+                LoadMesh(node, node.fbxNode);
+
+            for (int i = 0; i < node.children.Length; ++i)
+                LoadMeshRecursively(node.children[i]);
         }
 
         private Node SearchNode(Node node, ref string name)
@@ -115,10 +132,12 @@ namespace GraphicsStudy.UI
             int deformerCount = mesh.GetSkinDeformerCount();
             for (int i = 0; i < deformerCount; ++i)
             {
-                int clusterCount = mesh.GetClusterCount(i);
+                var skinDeformer = mesh.GetSkinDeformer(i);
+
+                int clusterCount = skinDeformer.GetClusterCount();
                 for (int j = 0; j < clusterCount; ++j)
                 {
-                    var cluster = mesh.GetCluster(i, j);
+                    var cluster = skinDeformer.GetCluster(j);
                     var link = cluster.GetLink();
                     string linkName = link.GetName();
 
@@ -126,7 +145,7 @@ namespace GraphicsStudy.UI
 
                     if (linkNode == null)
                     {
-                        System.Diagnostics.Debug.WriteLine("Cannot find bone " + linkName);
+                        DebugUtil.WriteLine("Cannot find bone " + linkName);
                         continue;
                     }
 
@@ -159,52 +178,14 @@ namespace GraphicsStudy.UI
             GL.BindVertexArray(0);
         }
 
-        private Matrix4 GetTransform(FbxSDK.Node node)
+        private Matrix4 GetGlobalTransform(FbxSDK.Node node)
         {
-            Matrix4 transform = Matrix4.CreateScale(Convert(node.GetScaling()));
-            FbxSDK.Vector3 rotation = node.GetRotation();
-
-            switch (node.GetRotationOrder())
-            {
-                case FbxSDK.RotationOrder.EulerXYZ:
-                    transform *= Matrix4.CreateRotationX((float)rotation.x);
-                    transform *= Matrix4.CreateRotationY((float)rotation.y);
-                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
-                    break;
-                case FbxSDK.RotationOrder.EulerXZY:
-                    transform *= Matrix4.CreateRotationX((float)rotation.x);
-                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
-                    transform *= Matrix4.CreateRotationY((float)rotation.y);
-                    break;
-                case FbxSDK.RotationOrder.EulerYXZ:
-                    transform *= Matrix4.CreateRotationY((float)rotation.y);
-                    transform *= Matrix4.CreateRotationX((float)rotation.x);
-                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
-                    break;
-                case FbxSDK.RotationOrder.EulerYZX:
-                    transform *= Matrix4.CreateRotationY((float)rotation.y);
-                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
-                    transform *= Matrix4.CreateRotationX((float)rotation.x);
-                    break;
-                case FbxSDK.RotationOrder.EulerZXY:
-                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
-                    transform *= Matrix4.CreateRotationX((float)rotation.x);
-                    transform *= Matrix4.CreateRotationY((float)rotation.y);
-                    break;
-                case FbxSDK.RotationOrder.EulerZYX:
-                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
-                    transform *= Matrix4.CreateRotationY((float)rotation.y);
-                    transform *= Matrix4.CreateRotationX((float)rotation.x);
-                    break;
-            }
-
-            transform *= Matrix4.CreateTranslation(Convert(node.GetTranslation()));
-            return transform;
+            return Converter.Convert(node.EvaluateGlobalTransform(new FbxSDK.Time(0)), node.GetRotationOrder());
         }
 
-        private Vector3 Convert(FbxSDK.Vector3 vec)
+        private Matrix4 GetGeometry(FbxSDK.Node node)
         {
-            return new Vector3((float)vec.x, (float)vec.y, (float)vec.z);
+            return Converter.Convert(node.GetGeometryOffset(), node.GetRotationOrder());
         }
 
         private void UpdateProjectionMatrix()
@@ -263,6 +244,12 @@ namespace GraphicsStudy.UI
                 camPos += right * -speed;
             else if (e.KeyChar == 'd')
                 camPos += right * speed;
+            else if (e.KeyChar == 'z')
+                --selectedPose;
+            else if (e.KeyChar == 'x')
+                ++selectedPose;
+
+            selectedPose = (selectedPose + poseList.Count) % poseList.Count;
 
             DebugUtil.WriteLine(camPos);
             UpdateViewMatrix();
