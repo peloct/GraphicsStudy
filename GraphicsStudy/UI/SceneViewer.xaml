@@ -15,7 +15,7 @@
         <WindowsFormsHost Grid.Column="0">
             <opentk:GLControl x:Name="glControl" Load="GLControl_Load" Resize="GLControl_Resize" Paint="GLControl_Paint"/>
         </WindowsFormsHost>
-        <StackPanel Grid.Column="1" Background="White">
+        <StackPanel Grid.Column="1" Background="White" x:Name="panel">
             <WrapPanel Orientation="Horizontal">
                 <Label>global scale</Label>
                 <Slider x:Name="globalScaleSlider" Minimum="0.001" Maximum="10" Width="150" ValueChanged="globalScaleSlider_ValueChanged"/>

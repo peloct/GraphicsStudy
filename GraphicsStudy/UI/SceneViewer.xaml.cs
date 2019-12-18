@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using System.Collections.Generic;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -14,24 +15,120 @@ namespace GraphicsStudy.UI
     /// </summary>
     public partial class SceneViewer : UserControl
     {
-        private class Node
+        private struct VertexData
         {
-            public FbxSDK.Node fbxNode;
-            public string name;
-            public Matrix4 toParent;
-            public Matrix4 localToWorld;
-            public Node[] children;
+            public float x;
+            public float y;
+            public float z;
+
+            public byte boneIndex1;
+            public byte boneIndex2;
+            public byte boneIndex3;
+            public byte boneIndex4;
+
+            public byte boneIndex5;
+            public byte boneIndex6;
+            public byte boneIndex7;
+            public byte boneIndex8;
+
+            public byte boneIndex9;
+            public byte boneIndex10;
+            public byte boneIndex11;
+            public byte boneIndex12;
+
+            public byte boneIndex13;
+            public byte boneIndex14;
+            public byte boneIndex15;
+            public byte boneIndex16;
+
+            public float boneWeight1;
+            public float boneWeight2;
+            public float boneWeight3;
+            public float boneWeight4;
+
+            public float boneWeight5;
+            public float boneWeight6;
+            public float boneWeight7;
+            public float boneWeight8;
+
+            public float boneWeight9;
+            public float boneWeight10;
+            public float boneWeight11;
+            public float boneWeight12;
+
+            public float boneWeight13;
+            public float boneWeight14;
+            public float boneWeight15;
+            public float boneWeight16;
+
+            private static FieldInfo[] indexFieldInfos = null;
+            private static FieldInfo[] weightFieldInfos = null;
+
+            public static void SetBoneInfo(ref VertexData target, int fieldIndex, byte boneIndex, float boneWeight)
+            {
+                Type type = typeof(VertexData);
+
+                if (indexFieldInfos == null)
+                {
+                    indexFieldInfos = new FieldInfo[16];
+                    weightFieldInfos = new FieldInfo[16];
+
+                    for (int i = 0; i < 16; ++i)
+                    {
+                        indexFieldInfos[i] = type.GetField(string.Format("boneIndex{0}", i + 1));
+                        weightFieldInfos[i] = type.GetField(string.Format("boneWeight{0}", i + 1));
+                    }
+                }
+
+                object boxed = (object)target; // hello gc! :)
+                indexFieldInfos[fieldIndex].SetValue(boxed, boneIndex);
+                weightFieldInfos[fieldIndex].SetValue(boxed, boneWeight);
+                target = (VertexData)boxed;
+            }
+
+            public static int GetBoneIndexPos(int index)
+            {
+                return sizeof(float) * 3 + index * sizeof(byte) * 4;
+            }
+
+            public static int GetBoneWeightPos(int index)
+            {
+                return sizeof(float) * 3 + sizeof(byte) * 16 + index * sizeof(float) * 4;
+            }
+
+            public static int GetSize()
+            {
+                return sizeof(float) * 3 + sizeof(byte) * 16 + sizeof(float) * 16;
+            }
+        }
+
+        private const int MaxBoneCount = 50;
+
+        private class BoneInfo
+        {
+            public int boneIndex;
+            public FbxSDK.Cluster cluster;
+            public MeshInfo ownerMeshInfo;
         }
 
         private class MeshInfo
         {
-            public Node node;
+            public string meshName;
+            public FbxSDK.Node node;
+
             public int vertexArray;
+
             public int polygonCount;
+            public int controlPointsCount;
+            public int[] nextSkinningIndex;
+
+            public Matrix4 geometryToWorld;
+            public Matrix4[] boneTrasforms;
         }
 
-        private Node rootNode;
+        private List<BoneInfo> boneInfoList = new List<BoneInfo>();
         private List<MeshInfo> meshInfoList = new List<MeshInfo>();
+        private List<FbxSDK.AnimationStack> animationList = new List<FbxSDK.AnimationStack>(); 
         private List<FbxSDK.Pose> poseList = new List<FbxSDK.Pose>();
 
         private FbxSDK.Scene scene;
@@ -42,10 +139,17 @@ namespace GraphicsStudy.UI
         private Matrix4 projection;
         private Matrix4 view;
 
-        private int selectedPose = 0;
-
         private float globalScale = 1;
         private Matrix4 globalTrans = Matrix4.Identity;
+
+        private FbxSDK.Time start;
+        private FbxSDK.Time stop;
+        private FbxSDK.Time curTime;
+        private FbxSDK.Time oneFrame;
+
+        private FbxSDK.Pose curPose;
+
+        private NodeHierarchy nodeHierarchy;
 
         public SceneViewer()
         {
@@ -53,134 +157,297 @@ namespace GraphicsStudy.UI
             globalScaleSlider.Value = 1f;
         }
 
-        public void ShowScene(FbxSDK.Scene scene)
+        public void ShowScene(NodeHierarchy nodeHierarchy, FbxSDK.Scene scene)
         {
             this.scene = scene;
-            glControl.MakeCurrent();
-            Matrix4 identity = Matrix4.Identity;
-            rootNode = ConstructNodeTree(scene.GetRootNode(), ref identity);
+            this.nodeHierarchy = nodeHierarchy;
+
+            int animationCount = scene.GetAnimStackCount();
+            for (int i = 0; i < animationCount; ++i)
+            {
+                var animStack = scene.GetAnimStack(i);
+                animationList.Add(animStack);
+            }
+
+            oneFrame = new FbxSDK.Time(0, 0, 0, 1, scene.GetGlobalTimeMode());
+            start = stop = curTime = FbxSDK.Time.Infinite();
+
+            if (animationList.Count > 0)
+            {
+                var timeSpan = scene.GetAnimTimelineTimeSpan(animationList[0]);
+                start = timeSpan.start;
+                stop = timeSpan.stop;
+                curTime = start;
+                scene.SetCurrentAnimStack(animationList[0]);
+
+                for (int i = 0; i < animationList.Count; ++i)
+                {
+                    int animationID = i;
+                    Button animationButton = new Button();
+                    animationButton.Content = animationList[i].GetName();
+                    animationButton.Click += (a, b) =>
+                    {
+                        var span = scene.GetAnimTimelineTimeSpan(animationList[animationID]);
+                        scene.SetCurrentAnimStack(animationList[animationID]);
+                        start = span.start;
+                        stop = span.stop;
+                        curTime = start;
+                    };
+                    panel.Children.Add(animationButton);
+                }
+            }
 
             int poseCount = scene.GetPoseCount();
             for (int i = 0; i < poseCount; ++i)
-                poseList.Add(scene.GetPose(i));
+                poseList.Add(scene.GetPose(0));
 
-            LoadMeshRecursively(rootNode);
+            if (poseList.Count > 0)
+            {
+                Button deselectPoseButton = new Button();
+                deselectPoseButton.Content = "Deselect Pose";
+                deselectPoseButton.Click += (a, b) =>
+                {
+                    curPose = null;
+                };
+                panel.Children.Add(deselectPoseButton);
+
+                for (int i = 0; i < poseCount; ++i)
+                {
+                    int poseID = i;
+                    Button poseButton = new Button();
+                    poseButton.Content = "Select Pose " + i;
+                    poseButton.Click += (a, b) =>
+                    {
+                        curPose = poseList[poseID];
+                    };
+                    panel.Children.Add(poseButton);
+                }
+            }
         }
 
-        private Node ConstructNodeTree(FbxSDK.Node node, ref Matrix4 parentMatrix)
+        private void UpdateMeshInfos()
         {
-            Node ret = new Node();
-            ret.fbxNode = node;
-            ret.name = node.GetName();
-            ret.toParent = GetGlobalTransform(node);
-            ret.localToWorld = GetGlobalTransform(node) * GetGeometry(node);//  ret.toParent * parentMatrix;
+            Matrix4 identity = Matrix4.Identity;
+            UpdateMeshInfoRecursively(scene.GetRootNode(), ref identity);
+        }
 
+        private void UpdateMeshInfoRecursively(FbxSDK.Node node, ref Matrix4 parentMatrix)
+        {
             int childCount = node.GetChildCount();
-            ret.children = new Node[childCount];
+
+            Matrix4 globalTransform = GetGlobalTransform(node, parentMatrix);
+
+            FbxSDK.Mesh mesh = node.GetAttribute() as FbxSDK.Mesh;
+            if (mesh != null)
+            {
+                Matrix4 meshTransform = GetGeometry(node) * globalTransform;
+
+                MeshInfo meshInfo = FindMeshInfo(mesh);
+                if (meshInfo == null)
+                    meshInfo = LoadMesh(mesh);
+
+                meshInfo.geometryToWorld = meshTransform;
+            }
+
             for (int i = 0; i < childCount; ++i)
-                ret.children[i] = ConstructNodeTree(node.GetChild(i), ref ret.localToWorld);
-
-            return ret;
+                UpdateMeshInfoRecursively(node.GetChild(i), ref globalTransform);
         }
 
-        private void LoadMeshRecursively(Node node)
+        private MeshInfo FindMeshInfo(FbxSDK.Mesh mesh)
         {
-            var attribute = node.fbxNode.GetAttribute();
-
-            if (attribute != null && attribute.GetAttributeType() == FbxSDK.NodeAttributeType.Mesh)
-                LoadMesh(node, node.fbxNode);
-
-            for (int i = 0; i < node.children.Length; ++i)
-                LoadMeshRecursively(node.children[i]);
+            string meshName = mesh.GetNode().GetName();
+            return meshInfoList.Find(v => v.meshName == meshName); // TODO : Equals override
         }
 
-        private Node SearchNode(Node node, ref string name)
+        private MeshInfo LoadMesh(FbxSDK.Mesh mesh)
         {
-            if (node.name == name)
-                return node;
+            MeshInfo meshInfo = new MeshInfo();
+            meshInfoList.Add(meshInfo);
 
-            for (int i = 0; i < node.children.Length; ++i)
-            {
-                Node result = SearchNode(node.children[i], ref name);
-                if (result != null)
-                    return result;
-            }
-
-            return null;
-        }
-
-        private void LoadMesh(Node node, FbxSDK.Node fbxNode)
-        {
-            var mesh = (FbxSDK.Mesh)fbxNode.GetAttribute();
+            meshInfo.meshName = mesh.GetNode().GetName();
+            meshInfo.node = mesh.GetNode();
             int polygonCount = mesh.GetPolygonCount();
+            int controlPointsCount = mesh.GetControlPointsCount();
+            meshInfo.polygonCount = polygonCount;
+            meshInfo.controlPointsCount = controlPointsCount;
+            meshInfo.nextSkinningIndex = new int[controlPointsCount];
+            meshInfo.boneTrasforms = new Matrix4[MaxBoneCount];
 
-            float[] vertexDatas = new float[polygonCount * 3 * 3];
-            int size = 0;
+            int vertexArray = GL.GenVertexArray();
+            meshInfo.vertexArray = vertexArray;
 
-            for (int i = 0; i < polygonCount; ++i)
-            {
-                for (int j = 0; j < 3; ++j)
-                {
-                    var coordinate = mesh.GetCoordinate(i, j);
-
-                    vertexDatas[size++] = (float)coordinate.x;
-                    vertexDatas[size++] = (float)coordinate.y;
-                    vertexDatas[size++] = (float)coordinate.z;
-                }
-            }
-
-            int deformerCount = mesh.GetSkinDeformerCount();
-            for (int i = 0; i < deformerCount; ++i)
-            {
-                var skinDeformer = mesh.GetSkinDeformer(i);
-
-                int clusterCount = skinDeformer.GetClusterCount();
-                for (int j = 0; j < clusterCount; ++j)
-                {
-                    var cluster = skinDeformer.GetCluster(j);
-                    var link = cluster.GetLink();
-                    string linkName = link.GetName();
-
-                    Node linkNode = SearchNode(rootNode, ref linkName);
-
-                    if (linkNode == null)
-                    {
-                        DebugUtil.WriteLine("Cannot find bone " + linkName);
-                        continue;
-                    }
-
-                    int controlPointCount = cluster.GetControlIndicesCount();
-                    for (int k = 0; k < controlPointCount; ++k)
-                    {
-                        int controlPointIndex = cluster.GetControlPointIndex(k);
-                        double weight = cluster.GetControlPointWeight(k);
-                    }
-                }
-            }
-
-            int newVertexArray = GL.GenVertexArray();
-
-            meshInfoList.Add(new MeshInfo()
-            {
-                node = node,
-                vertexArray = newVertexArray,
-                polygonCount = polygonCount
-            });
-
-            GL.BindVertexArray(newVertexArray);
+            GL.BindVertexArray(vertexArray);
 
             int vertexBuffer = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, vertexBuffer);
-            GL.BufferData(BufferTarget.ArrayBuffer, size * sizeof(float), vertexDatas, BufferUsageHint.StaticDraw);
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
+
+            int elementBuffer = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, elementBuffer);
+
+            VertexData[] vertexBufferData = new VertexData[controlPointsCount];
+            int[] vertexBufferBoneCounter = new int[controlPointsCount];
+
+            for (int i = 0; i < controlPointsCount; ++i)
+            {
+                Vector3 coordinate = Converter.Convert(mesh.GetControlPoint(i));
+
+                vertexBufferData[i] = new VertexData()
+                {
+                    x = coordinate.X,
+                    y = coordinate.Y,
+                    z = coordinate.Z
+                };
+            }
+
+            int skinDeformerCount = mesh.GetSkinDeformerCount();
+            byte boneIndex = 0;
+
+            for (int i = 0; i < skinDeformerCount; ++i)
+            {
+                FbxSDK.Skin skin = mesh.GetSkinDeformer(i);
+
+                var skinningType = skin.GetSkinningType();
+
+                if (skinningType == FbxSDK.SkinningType.Linear || skinningType == FbxSDK.SkinningType.Rigid)
+                {
+                    int clusterCount = skin.GetClusterCount();
+
+                    for (int j = 0; j < clusterCount; ++j)
+                    {
+                        FbxSDK.Cluster cluster = skin.GetCluster(j);
+                        FbxSDK.Node link = cluster.GetLink();
+
+                        if (link == null)
+                            continue;
+
+                        if (cluster.HasAssociateModel())
+                            DebugUtil.WriteLine("No support for associate model.");
+
+                        int indexCount = cluster.GetControlIndicesCount();
+                        bool isValidBone = false;
+
+                        for (int k = 0; k < indexCount; ++k)
+                        {
+                            int controlPointIndex = cluster.GetControlPointIndex(k);
+                            float controlPointWeight = (float)cluster.GetControlPointWeight(k);
+
+                            if (vertexBufferBoneCounter[controlPointIndex] == 16)
+                                continue;
+
+                            isValidBone = true;
+                            int fieldIndex = vertexBufferBoneCounter[controlPointIndex];
+                            VertexData.SetBoneInfo(ref vertexBufferData[controlPointIndex], fieldIndex, boneIndex, controlPointWeight);
+                            ++vertexBufferBoneCounter[controlPointIndex];
+                        }
+
+                        if (isValidBone)
+                        {
+                            boneInfoList.Add(new BoneInfo()
+                            {
+                                cluster = cluster,
+                                boneIndex = boneIndex,
+                                ownerMeshInfo = meshInfo
+                            });
+
+                            ++boneIndex;
+                        }
+                    }
+                }
+                else
+                {
+                    DebugUtil.WriteLine("No support for dual quaternion and blend."); // TODO : Dual Quaternion rigging
+                }
+            }
+
+            int[] indices = new int[polygonCount * 3];
+
+            for (int i = 0; i < polygonCount; ++i)
+            {
+                indices[3 * i] = mesh.GetControlPointIndex(i, 0);
+                indices[3 * i + 1] = mesh.GetControlPointIndex(i, 1);
+                indices[3 * i + 2] = mesh.GetControlPointIndex(i, 2);
+            }
+
+            GL.BufferData(BufferTarget.ArrayBuffer, vertexBufferData.Length * VertexData.GetSize(), vertexBufferData, BufferUsageHint.StaticDraw);
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, VertexData.GetSize(), 0);
             GL.EnableVertexAttribArray(0);
 
+            for (int i = 0; i < 4; ++i)
+            {
+                int attribIndexIndex = i + 1;
+                GL.VertexAttribIPointer(attribIndexIndex, 4, VertexAttribIntegerType.UnsignedByte, VertexData.GetSize(), new IntPtr(VertexData.GetBoneIndexPos(i)));
+                GL.EnableVertexAttribArray(attribIndexIndex);
+            }
+
+            for (int i = 0; i < 4; ++i)
+            {
+                int attribIndexIndex = i + 5;
+                GL.VertexAttribPointer(attribIndexIndex, 4, VertexAttribPointerType.Float, false, VertexData.GetSize(), VertexData.GetBoneWeightPos(i));
+                GL.EnableVertexAttribArray(attribIndexIndex);
+            }
+
+            GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(int), indices, BufferUsageHint.StaticDraw);
             GL.BindVertexArray(0);
+
+            return meshInfo;
         }
 
-        private Matrix4 GetGlobalTransform(FbxSDK.Node node)
+        private void UpdateBoneInfos()
         {
-            return Converter.Convert(node.EvaluateGlobalTransform(new FbxSDK.Time(0)), node.GetRotationOrder());
+            for (int i = 0; i < boneInfoList.Count; ++i)
+            {
+                var cluster = boneInfoList[i].cluster;
+                var node = boneInfoList[i].ownerMeshInfo.node;
+                var link = cluster.GetLink();
+
+                var initialGeometryToWorld = Converter.Convert(cluster.GetTransformMatrix(), node.GetRotationOrder());
+                var initialWorldToLink = Converter.Convert(cluster.GetTransformLinkMatrix(), link.GetRotationOrder()).Inverted();
+                var curWorldToGeometry = boneInfoList[i].ownerMeshInfo.geometryToWorld.Inverted();
+                var curLinkToWorld = GetGlobalTransform(link);
+
+                Matrix4 initialGeometryToCurGeometry = initialGeometryToWorld * initialWorldToLink * curLinkToWorld * curWorldToGeometry;
+
+                boneInfoList[i].ownerMeshInfo.boneTrasforms[boneInfoList[i].boneIndex] = initialGeometryToCurGeometry;
+            }
+        }
+
+        private Matrix4 GetGlobalTransform(FbxSDK.Node node, Matrix4? parentGlobalTransform = null)
+        {
+            Matrix4 globalTransform = Matrix4.Identity;
+            bool isGlobalTransformReady = false;
+
+            if (curPose != null)
+            {
+                int nodeIndex = curPose.Find(node);
+                if (nodeIndex >= 0)
+                {
+                    Matrix4 poseMat = Converter.Convert(curPose.GetMatrix(nodeIndex), node.GetRotationOrder());
+
+                    if (curPose.IsBindPose() || !curPose.IsLocalMatrix(nodeIndex))
+                    {
+                        globalTransform = poseMat;
+                    }
+                    else
+                    {
+                        if (parentGlobalTransform.HasValue)
+                        {
+                            globalTransform = poseMat * parentGlobalTransform.Value;
+                        }
+                        else
+                        {
+                            if (node.GetParent() != null)
+                                globalTransform = poseMat * GetGlobalTransform(node.GetParent());
+                        }
+                    }
+
+                    isGlobalTransformReady = true;
+                }
+            }
+
+            if (isGlobalTransformReady == false)
+                globalTransform = Converter.Convert(node.EvaluateGlobalTransform(curTime), node.GetRotationOrder());
+
+            return globalTransform;
         }
 
         private Matrix4 GetGeometry(FbxSDK.Node node)
@@ -206,7 +473,7 @@ namespace GraphicsStudy.UI
 
             glControl.MakeCurrent();
             shader = Shader.Create(
-                @"C:\Users\peloc\Desktop\GraphicsStudy\GraphicsStudy\Resources\Shaders\TransformPos.vert",
+                @"C:\Users\peloc\Desktop\GraphicsStudy\GraphicsStudy\Resources\Shaders\SkinningTransform.vert",
                 @"C:\Users\peloc\Desktop\GraphicsStudy\GraphicsStudy\Resources\Shaders\SimpleColor.frag");
 
             GL.ClearColor(new Color4(0f, 0f, 0f, 1f));
@@ -232,24 +499,18 @@ namespace GraphicsStudy.UI
             Vector3 right = Vector3.Cross(frontDir, new Vector3(0, 1, 0));
             right /= right.Length;
 
-            if (e.KeyChar == 'w')
+            if (e.KeyChar == 'i')
                 camPos += frontDir * speed;
-            else if (e.KeyChar == 's')
+            else if (e.KeyChar == 'k')
                 camPos += frontDir * -speed;
-            else if (e.KeyChar == 'q')
+            else if (e.KeyChar == 'o')
                 camPos.Y += speed;
-            else if (e.KeyChar == 'e')
+            else if (e.KeyChar == 'u')
                 camPos.Y -= speed;
-            else if (e.KeyChar == 'a')
+            else if (e.KeyChar == 'j')
                 camPos += right * -speed;
-            else if (e.KeyChar == 'd')
+            else if (e.KeyChar == 'l')
                 camPos += right * speed;
-            else if (e.KeyChar == 'z')
-                --selectedPose;
-            else if (e.KeyChar == 'x')
-                ++selectedPose;
-
-            selectedPose = (selectedPose + poseList.Count) % poseList.Count;
 
             DebugUtil.WriteLine(camPos);
             UpdateViewMatrix();
@@ -257,25 +518,51 @@ namespace GraphicsStudy.UI
 
         private void GLControl_Paint(object sender, System.Windows.Forms.PaintEventArgs e)
         {
+            if (start != FbxSDK.Time.Infinite())
+            {
+                curTime += oneFrame;
+                if (curTime > stop)
+                    curTime = start;
+            }
+
             glControl.MakeCurrent();
+
+            if (scene != null)
+            {
+                var selectedNode = nodeHierarchy.CurSelected;
+
+                if (selectedNode != null)
+                {
+                    // Action to do when some node has been selected.
+                }
+
+                UpdateMeshInfos();
+                UpdateBoneInfos();
+            }
+
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
             shader.Use();
 
             for (int i = 0; i < meshInfoList.Count; ++i)
             {
-                GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
-                Matrix4 mvp = meshInfoList[i].node.localToWorld * globalTrans * view * projection;
+                GL.BindVertexArray(meshInfoList[i].vertexArray);
+
+                Matrix4 mvp = meshInfoList[i].geometryToWorld * globalTrans * view * projection;
+
+                shader.SetMatrix4Array("skinningTransforms", meshInfoList[i].boneTrasforms);
+
                 shader.SetMatrix4("mvp", ref mvp);
                 shader.SetColor("color", new Color4(1f, 1f, 1f, 1f));
-                GL.BindVertexArray(meshInfoList[i].vertexArray);
-                GL.DrawArrays(PrimitiveType.Triangles, 0, meshInfoList[i].polygonCount * 3);
 
-                GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
-                mvp.M43 -= 0.0001f;
+                GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+                GL.DrawElements(BeginMode.Triangles, meshInfoList[i].polygonCount * 3, DrawElementsType.UnsignedInt, 0);
+
+                mvp.M43 -= 0.001f;
                 shader.SetMatrix4("mvp", ref mvp);
                 shader.SetColor("color", new Color4(1f, 0f, 0f, 1f));
-                GL.DrawArrays(PrimitiveType.Triangles, 0, meshInfoList[i].polygonCount * 3);
+                GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+                GL.DrawElements(BeginMode.Triangles, meshInfoList[i].polygonCount * 3, DrawElementsType.UnsignedInt, 0);
             }
 
             glControl.SwapBuffers();

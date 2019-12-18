@@ -1,4 +1,5 @@
-﻿using System.Windows.Controls;
+﻿using System.Windows;
+using System.Windows.Controls;
 
 namespace GraphicsStudy.UI
 {
@@ -7,9 +8,20 @@ namespace GraphicsStudy.UI
     /// </summary>
     public partial class NodeHierarchy : UserControl
     {
+        public FbxSDK.Node CurSelected { get; private set; }
+
         public NodeHierarchy()
         {
             InitializeComponent();
+            treeView.SelectedItemChanged += OnSelectedItemChanged;
+        }
+
+        private void OnSelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            var item = e.NewValue as TreeViewItem;
+            CurSelected = null;
+            if (item != null)
+                CurSelected = item.Tag as FbxSDK.Node;
         }
 
         public void SetNode(FbxSDK.Node rootNode)
@@ -31,6 +43,7 @@ namespace GraphicsStudy.UI
             }
 
             viewItem.Header = name;
+            viewItem.Tag = node;
 
             for (int i = 0; i < node.GetChildCount(); ++i)
             {

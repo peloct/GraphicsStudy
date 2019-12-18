@@ -82,6 +82,9 @@
     <Compile Include="UI\SceneViewer.xaml.cs">
       <DependentUpon>SceneViewer.xaml</DependentUpon>
     </Compile>
+    <Compile Include="UI\OOPartsHi.xaml.cs">
+      <DependentUpon>OOPartsHi.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Utils\Converter.cs" />
     <Compile Include="Utils\DebugUtil.cs" />
     <Page Include="MainWindow.xaml">
@@ -103,6 +106,10 @@
     <Page Include="UI\SceneViewer.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\OOPartsHi.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
   <ItemGroup>
@@ -130,6 +137,7 @@
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
     <None Include="Resources\Shaders\SimpleColor.frag" />
+    <None Include="Resources\Shaders\SkinningTransform.vert" />
     <None Include="Resources\Shaders\TransformPos.vert" />
   </ItemGroup>
   <ItemGroup>

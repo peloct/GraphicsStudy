@@ -12,7 +12,7 @@ namespace GraphicsStudy.UI
     /// <summary>
     /// Scene.xaml에 대한 상호 작용 논리
     /// </summary>
-    public partial class TestScene : UserControl
+    public partial class OOPartsHi : UserControl
     {
         private struct VertexData
         {
@@ -52,7 +52,7 @@ namespace GraphicsStudy.UI
         private float secondBoneZRot = 0;
         private float secondBoneXRot = 0;
 
-        public TestScene()
+        public OOPartsHi()
         {
             InitializeComponent();
         }
@@ -151,7 +151,7 @@ namespace GraphicsStudy.UI
             GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, VertexData.GetSize(), 0);
             GL.EnableVertexAttribArray(0);
 
-            GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Int, false, VertexData.GetSize(), VertexData.GetBoneIndexPos());
+            GL.VertexAttribIPointer(1, 2, VertexAttribIntegerType.Int, VertexData.GetSize(), new IntPtr(VertexData.GetBoneIndexPos()));
             GL.EnableVertexAttribArray(1);
 
             GL.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, VertexData.GetSize(), VertexData.GetBoneWeightPos());
@@ -178,8 +178,8 @@ namespace GraphicsStudy.UI
 
             glControl.MakeCurrent();
             shader = Shader.Create(
-                @"C:\Users\funi160921\source\repos\GraphicsStudy\GraphicsStudy\Resources\Shaders\TransformPos.vert",
-                @"C:\Users\funi160921\source\repos\GraphicsStudy\GraphicsStudy\Resources\Shaders\SimpleColor.frag");
+                @"C:\Users\peloc\Desktop\GraphicsStudy\GraphicsStudy\Resources\Shaders\TransformPos.vert",
+                @"C:\Users\peloc\Desktop\GraphicsStudy\GraphicsStudy\Resources\Shaders\SimpleColor.frag");
 
             GL.ClearColor(new Color4(0f, 0f, 0f, 1f));
             GL.DepthMask(true);

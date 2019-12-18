@@ -48,7 +48,7 @@ namespace GraphicsStudy
                     nodeHierarchy = null;
                 };
 
-                sceneViewer.ShowScene(scene);
+                sceneViewer.ShowScene(nodeHierarchy, scene);
             }
         }
     }

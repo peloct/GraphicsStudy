@@ -14,42 +14,43 @@ namespace GraphicsStudy
             return new Vector3((float)vec.x, (float)vec.y, (float)vec.z);
         }
 
-        public static Matrix4 Convert(FbxSDK.Matrix matrix, FbxSDK.RotationOrder rotationOrder)
+        public static Matrix4 Convert(FbxSDK.Matrix matrix, FbxSDK.RotationOrder rotationOrder) // TODO : Add RotationOrder field in FbxSDK.Matrix
         {
             Matrix4 transform = Matrix4.CreateScale(Convert(matrix.scaling));
             FbxSDK.Vector3 rotation = matrix.rotation;
+            double deg2PI = Math.PI / 180;
 
             switch (rotationOrder)
             {
                 case FbxSDK.RotationOrder.EulerXYZ:
-                    transform *= Matrix4.CreateRotationX((float)rotation.x);
-                    transform *= Matrix4.CreateRotationY((float)rotation.y);
-                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
+                    transform *= Matrix4.CreateRotationX((float)(rotation.x * deg2PI));
+                    transform *= Matrix4.CreateRotationY((float)(rotation.y * deg2PI));
+                    transform *= Matrix4.CreateRotationZ((float)(rotation.z * deg2PI));
                     break;
                 case FbxSDK.RotationOrder.EulerXZY:
-                    transform *= Matrix4.CreateRotationX((float)rotation.x);
-                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
-                    transform *= Matrix4.CreateRotationY((float)rotation.y);
+                    transform *= Matrix4.CreateRotationX((float)(rotation.x * deg2PI));
+                    transform *= Matrix4.CreateRotationZ((float)(rotation.z * deg2PI));
+                    transform *= Matrix4.CreateRotationY((float)(rotation.y * deg2PI));
                     break;
                 case FbxSDK.RotationOrder.EulerYXZ:
-                    transform *= Matrix4.CreateRotationY((float)rotation.y);
-                    transform *= Matrix4.CreateRotationX((float)rotation.x);
-                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
+                    transform *= Matrix4.CreateRotationY((float)(rotation.y * deg2PI));
+                    transform *= Matrix4.CreateRotationX((float)(rotation.x * deg2PI));
+                    transform *= Matrix4.CreateRotationZ((float)(rotation.z * deg2PI));
                     break;
                 case FbxSDK.RotationOrder.EulerYZX:
-                    transform *= Matrix4.CreateRotationY((float)rotation.y);
-                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
-                    transform *= Matrix4.CreateRotationX((float)rotation.x);
+                    transform *= Matrix4.CreateRotationY((float)(rotation.y * deg2PI));
+                    transform *= Matrix4.CreateRotationZ((float)(rotation.z * deg2PI));
+                    transform *= Matrix4.CreateRotationX((float)(rotation.x * deg2PI));
                     break;
                 case FbxSDK.RotationOrder.EulerZXY:
-                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
-                    transform *= Matrix4.CreateRotationX((float)rotation.x);
-                    transform *= Matrix4.CreateRotationY((float)rotation.y);
+                    transform *= Matrix4.CreateRotationZ((float)(rotation.z * deg2PI));
+                    transform *= Matrix4.CreateRotationX((float)(rotation.x * deg2PI));
+                    transform *= Matrix4.CreateRotationY((float)(rotation.y * deg2PI));
                     break;
                 case FbxSDK.RotationOrder.EulerZYX:
-                    transform *= Matrix4.CreateRotationZ((float)rotation.z);
-                    transform *= Matrix4.CreateRotationY((float)rotation.y);
-                    transform *= Matrix4.CreateRotationX((float)rotation.x);
+                    transform *= Matrix4.CreateRotationZ((float)(rotation.z * deg2PI));
+                    transform *= Matrix4.CreateRotationY((float)(rotation.y * deg2PI));
+                    transform *= Matrix4.CreateRotationX((float)(rotation.x * deg2PI));
                     break;
             }
 

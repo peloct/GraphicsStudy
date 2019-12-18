@@ -82,10 +82,22 @@ namespace GraphicsStudy.Rendering
             GL.Uniform4(location, color);
         }
 
+        public void SetFloatArray(string propertyName, float[] array)
+        {
+            int location = GL.GetUniformLocation(program, propertyName);
+            GL.Uniform1(location, array.Length, array);
+        }
+
         public void SetMatrix4(string propertyName, ref Matrix4 matrix)
         {
             int location = GL.GetUniformLocation(program, propertyName);
             GL.UniformMatrix4(location, false, ref matrix);
+        }
+
+        public void SetMatrix4Array(string propertyName, Matrix4[] array)
+        {
+            int location = GL.GetUniformLocation(program, propertyName);
+            GL.UniformMatrix4(location, array.Length, false, ref array[0].Row0.X);
         }
     }
 }
