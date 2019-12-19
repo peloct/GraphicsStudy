@@ -14,13 +14,13 @@ namespace GraphicsStudy
             return new Vector3((float)vec.x, (float)vec.y, (float)vec.z);
         }
 
-        public static Matrix4 Convert(FbxSDK.Matrix matrix, FbxSDK.RotationOrder rotationOrder) // TODO : Add RotationOrder field in FbxSDK.Matrix
+        public static Matrix4 Convert(FbxSDK.Matrix matrix) // TODO : Add RotationOrder field in FbxSDK.Matrix
         {
             Matrix4 transform = Matrix4.CreateScale(Convert(matrix.scaling));
             FbxSDK.Vector3 rotation = matrix.rotation;
             double deg2PI = Math.PI / 180;
 
-            switch (rotationOrder)
+            switch (matrix.rotationOrder)
             {
                 case FbxSDK.RotationOrder.EulerXYZ:
                     transform *= Matrix4.CreateRotationX((float)(rotation.x * deg2PI));

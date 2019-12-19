@@ -113,7 +113,7 @@ namespace GraphicsStudy.UI
 
         private class MeshInfo
         {
-            public string meshName;
+            public FbxSDK.Mesh mesh;
             public FbxSDK.Node node;
 
             public int vertexArray;
@@ -255,16 +255,14 @@ namespace GraphicsStudy.UI
 
         private MeshInfo FindMeshInfo(FbxSDK.Mesh mesh)
         {
-            string meshName = mesh.GetNode().GetName();
-            return meshInfoList.Find(v => v.meshName == meshName); // TODO : Equals override
+            return meshInfoList.Find(v => v.mesh == mesh);
         }
 
         private MeshInfo LoadMesh(FbxSDK.Mesh mesh)
         {
             MeshInfo meshInfo = new MeshInfo();
             meshInfoList.Add(meshInfo);
-
-            meshInfo.meshName = mesh.GetNode().GetName();
+            meshInfo.mesh = mesh;
             meshInfo.node = mesh.GetNode();
             int polygonCount = mesh.GetPolygonCount();
             int controlPointsCount = mesh.GetControlPointsCount();
@@ -400,8 +398,8 @@ namespace GraphicsStudy.UI
                 var node = boneInfoList[i].ownerMeshInfo.node;
                 var link = cluster.GetLink();
 
-                var initialGeometryToWorld = Converter.Convert(cluster.GetTransformMatrix(), node.GetRotationOrder());
-                var initialWorldToLink = Converter.Convert(cluster.GetTransformLinkMatrix(), link.GetRotationOrder()).Inverted();
+                var initialGeometryToWorld = Converter.Convert(cluster.GetTransformMatrix());
+                var initialWorldToLink = Converter.Convert(cluster.GetTransformLinkMatrix()).Inverted();
                 var curWorldToGeometry = boneInfoList[i].ownerMeshInfo.geometryToWorld.Inverted();
                 var curLinkToWorld = GetGlobalTransform(link);
 
@@ -421,7 +419,7 @@ namespace GraphicsStudy.UI
                 int nodeIndex = curPose.Find(node);
                 if (nodeIndex >= 0)
                 {
-                    Matrix4 poseMat = Converter.Convert(curPose.GetMatrix(nodeIndex), node.GetRotationOrder());
+                    Matrix4 poseMat = Converter.Convert(curPose.GetMatrix(nodeIndex));
 
                     if (curPose.IsBindPose() || !curPose.IsLocalMatrix(nodeIndex))
                     {
@@ -445,14 +443,14 @@ namespace GraphicsStudy.UI
             }
 
             if (isGlobalTransformReady == false)
-                globalTransform = Converter.Convert(node.EvaluateGlobalTransform(curTime), node.GetRotationOrder());
+                globalTransform = Converter.Convert(node.EvaluateGlobalTransform(curTime));
 
             return globalTransform;
         }
 
         private Matrix4 GetGeometry(FbxSDK.Node node)
         {
-            return Converter.Convert(node.GetGeometryOffset(), node.GetRotationOrder());
+            return Converter.Convert(node.GetGeometryOffset());
         }
 
         private void UpdateProjectionMatrix()
